@@ -39,8 +39,6 @@ class QuadraticQuartic(object):
         self.q4b_coef = q4_coef if q4b_coef is None else q4b_coef
         self.d = d
         self.sigma = sigma
-        self.grad_x = grad(self.objective, 0)
-        self.grad_y = grad(self.objective, 1)
 
     def objective(self, x, y):
         obj = 0
@@ -55,6 +53,12 @@ class QuadraticQuartic(object):
         if self.lin_coef != 0:
             obj += self.lin_coef*x@self.C@y
         return obj
+
+    def grad_x(self, x, y):
+        return grad(self.objective, 0)(x, y)
+
+    def grad_y(self, x, y):
+        return grad(self.objective, 1)(x, y)
 
     def grad_x_gaussian_noise(self, x, y):
         noise = np.random.randn(self.d) * self.sigma

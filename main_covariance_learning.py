@@ -29,6 +29,7 @@ def main(params):
     init = init_e
     iters = params.nb_iterations
     algo = algos[params.algo]
+    offset = params.offset
 
     np.save(os.path.join(params.save_dir, 'COV'), lc.cov)
 
@@ -42,7 +43,6 @@ def main(params):
     dec_exponents = [
             (0, 0.7), (0.2, 0.7), (0.5, 0.7), (0.7, 0.7),
             (0.3, 0.6), (0.1, 0.8), (0, 0.9)]
-    offset = params.offset
 
     if params.exe == 'seq':
         for dec_g, dec_e in dec_exponents:
@@ -98,8 +98,7 @@ def multi_runs(lc, algo, x1, y1, iters, offset,
         norm2, _ = single_run(lc, algo, x1, y1, iters, offset,
                               init_g, init_e, dec_g, dec_e, k)
         hiss.append(norm2)
-        np.save(os.path.join(save_dir, f'stoch-{dec_g}-{dec_e}'),
-                np.array(hiss))
+    np.save(os.path.join(save_dir, f'stoch-{dec_g}-{dec_e}'), np.array(hiss))
     return np.array(hiss)
 
 

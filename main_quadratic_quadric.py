@@ -1,6 +1,7 @@
 import os
 import csv
 from argparse import ArgumentParser
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 
@@ -27,11 +28,12 @@ def main(params):
     x1[0] = 1
     y1 = x1.copy()
     # proj = proj_players if params.constraint_type == 'normal' else None
-    init = 1/(2*max(params.L_l, params.L_ho))
     init_g = params.init_stepsize_gamma
     init_e = params.init_stepsize_eta
+    init = init_e
     iters = params.nb_iterations
     algo = algos[params.algo]
+    offset = params.offset
 
     np.save(os.path.join(params.save_dir, 'C'), qud.C)
     np.save(os.path.join(params.save_dir, 'A2'), qud.A2)
@@ -52,31 +54,75 @@ def main(params):
     # Stochastic runs
     dec_exponents = [
             (0, 0.7), (0.2, 0.7), (0.5, 0.7), (0.7, 0.7),
-            (0.3, 0.6), (0.1, 0.8), (0, 0.9)]
-    offset = params.offset
-    for dec_g, dec_e in dec_exponents:
-        dis2 = multi_runs(
-            qud, algo, x1, y1, sol, iters, offset,
-            init_g, init_e, dec_g, dec_e, params.rp_times)
-        np.save(os.path.join(params.save_dir, f'stoch-{dec_g}-{dec_e}'), dis2)
+            (0.1, 0.8), (0, 0.9), (0.3, 0.9), (0.9, 0.9)]
+
+    if params.exe == 'seq':
+        for dec_g, dec_e in dec_exponents:
+            multi_runs(qud, algo, x1, y1, sol, iters, offset,
+                       init_g, init_e, dec_g, dec_e,
+                       params.rp_times, params.save_dir)
+
+    elif params.exe == 'para':
+        pool = Pool(cpu_count())
+        args = []
+        for dec_g, dec_e in dec_exponents:
+            args.append(
+                (qud, algo, x1, y1, sol, iters, offset,
+                 init_g, init_e, dec_g, dec_e,
+                 params.rp_times, params.save_dir))
+        pool.map(multi_runs_para, args)
+
+    elif params.exe == 'para_all':
+        pool = Pool(cpu_count())
+        args = []
+        for dec_g, dec_e in dec_exponents:
+            for k in range(params.rp_times):
+                args.append(
+                    (qud, algo, x1, y1, sol, iters, offset,
+                     init_g, init_e, dec_g, dec_e, k))
+        results = pool.map(single_run_para, args)
+        for k, (dec_g, dec_e) in enumerate(dec_exponents):
+            dis2s = results[k*params.rp_times: (k+1)*params.rp_times]
+            np.save(os.path.join(params.save_dir, f'stoch-{dec_g}-{dec_e}'),
+                    np.array(dis2s))
+
+
+def single_run(qud, algo, x1, y1, sol, iters, offset,
+               init_g, init_e, dec_g, dec_e, rd_seed):
+    np.random.seed(rd_seed)
+    gamma, eta = init_g*offset**dec_g, init_e*offset**dec_e
+    opt = algo(
+        x1, y1, qud.grad_x_gaussian_noise, qud.grad_y_gaussian_noise)
+    opt.run(iters, gamma, eta,
+            dec_g=dec_g, dec_e=dec_e, dec=True, offset=offset)
+    dist2 = opt.distance2_his(sol)
+    return dist2, (dec_g, dec_e)
+
+
+def single_run_para(args):
+    return single_run(*args)[0]
 
 
 def multi_runs(qud, algo, x1, y1, sol, iters, offset,
-               init_g, init_e, dec_g, dec_e, rp_times):
+               init_g, init_e, dec_g, dec_e, rp_times, save_dir):
     hiss = []
-    gamma, eta, offset = init_g*offset**dec_g, init_e*offset**dec_e, offset
-    for _ in range(rp_times):
-        opt = algo(
-            x1, y1, qud.grad_x_gaussian_noise, qud.grad_y_gaussian_noise)
-        opt.run(iters, gamma, eta,
-                dec_g=dec_g, dec_e=dec_e, dec=True, offset=offset)
-        hiss.append(opt.distance2_his(sol))
+    for k in range(rp_times):
+        dist2, _ = single_run(qud, algo, x1, y1, sol, iters, offset,
+                              init_g, init_e, dec_g, dec_e, k)
+        hiss.append(dist2)
+    np.save(os.path.join(save_dir, f'stoch-{dec_g}-{dec_e}'), np.array(hiss))
     return np.array(hiss)
+
+
+def multi_runs_para(args):
+    multi_runs(*args)
 
 
 if __name__ == '__main__':
 
     parser = ArgumentParser()
+
+    parser.add_argument("--exe", type=str, default="para_all")
 
     parser.add_argument("--algo", type=str, default="EG")
     parser.add_argument("--dim", type=int, default=50)
