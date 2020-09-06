@@ -143,3 +143,35 @@ class LearnCovariance(object):
             self.z_v_used = False
         self.z_w_used = True
         return (x.T@x - V@(self.z.T@self.z)@V.T)/self.batch_size
+
+
+class FiniteSumBilinear(object):
+
+    def __init__(self, n, d, mu=1, L=2, sigma=0.1, sigma_dis=1):
+        self.n = n
+        self.d = d
+        self.A_avg = random_mat(d, mu, L)
+        self.As = self.A_avg + sigma * np.random.randn(n, d, d)
+        self.bs = np.random.randn(n, d) / d * sigma_dis
+        self.cs = np.random.randn(n, d) / d * sigma_dis
+        self.b_avg = np.mean(self.bs, axis=0)
+        self.c_avg = np.mean(self.cs, axis=0)
+        self.sol_x = np.linalg.solve(self.A_avg.T, -self.c_avg)
+        self.sol_y = np.linalg.solve(self.A_avg, -self.b_avg)
+
+    def get_perfect(self):
+        self.A_curr = self.A_avg
+        self.b_curr = self.b_avg
+        self.c_curr = self.c_avg
+
+    def draw_example(self):
+        k = np.random.randint(self.n)
+        self.A_curr = self.As[k]
+        self.b_curr = self.bs[k]
+        self.c_curr = self.cs[k]
+
+    def grad_x(self, x, y):
+        return self.A_curr@y + self.b_curr
+
+    def grad_y(self, x, y):
+        return self.A_curr.T@x + self.c_curr

@@ -110,10 +110,10 @@ if __name__ == '__main__':
 
     parser = ArgumentParser()
 
-    parser.add_argument("--exe", type=str, default="para")
+    parser.add_argument("--exe", type=str, default="para_all")
 
     parser.add_argument("--algo", type=str, default="EG")
-    parser.add_argument("--dim", type=int, default=2)
+    parser.add_argument("--dim", type=int, default=10)
     parser.add_argument("--batch_size", type=int, default=128)
 
     parser.add_argument("--mu", type=float, default=1)

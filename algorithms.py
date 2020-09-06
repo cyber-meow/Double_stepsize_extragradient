@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class GsGradientDescentAscent(object):
+class GsGDA(object):
 
     def __init__(self, x1, y1, vx, vy, proj=None):
         self.x = x1.copy()
@@ -27,6 +27,17 @@ class GsGradientDescentAscent(object):
                 self.step(gamma/(k+offset)**dec_rate)
             else:
                 self.step(gamma)
+
+
+class JacGDA(GsGDA):
+
+    def step(self, gamma):
+        vx = self.vx(self.x, self.y)
+        vy = self.vy(self.x, self.y)
+        self.x = self.proj(self.x - gamma*vx)
+        self.y = self.proj(self.y + gamma*vy)
+        self.x_his.append(self.x.copy())
+        self.y_his.append(self.y.copy())
 
 
 class TwoStep(object):
