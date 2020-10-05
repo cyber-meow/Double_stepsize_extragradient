@@ -25,7 +25,7 @@ class QuadraticQuartic(object):
     def __init__(self, d, mu=1, L=2, mu_l=1, L_l=2,
                  lin_coef=1, q2_coef=0, q4_coef=0,
                  q2a_coef=None, q2b_coef=None,
-                 q4a_coef=None, q4b_coef=None, sigma=0.1):
+                 q4a_coef=None, q4b_coef=None, sigma=0.1, jac_noise=False):
         self.A2 = random_posdef(d, mu, L)
         self.A4 = random_posdef(d, mu, L)
         self.B2 = random_posdef(d, mu, L)
@@ -39,6 +39,7 @@ class QuadraticQuartic(object):
         self.q4b_coef = q4_coef if q4b_coef is None else q4b_coef
         self.d = d
         self.sigma = sigma
+        self.jac_noise = jac_noise
 
     def objective(self, x, y):
         obj = 0
@@ -61,9 +62,9 @@ class QuadraticQuartic(object):
         return grad(self.objective, 1)(x, y)
 
     # Only for bilinear games
-    def Jv(self, X, jac_noise=False):
+    def Jv(self, X):
         mat_lin = self.C
-        if jac_noise:
+        if self.jac_noise:
             mat_lin += np.random.randn(self.d, self.d) * self.sigma
         mat = np.block([
             [np.zeros([self.d, self.d]), mat_lin],

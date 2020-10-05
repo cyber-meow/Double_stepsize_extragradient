@@ -45,6 +45,10 @@ class StochHamiltonian(object):
             else:
                 self.step(gamma)
 
+    def distance2_his(self, sol):
+        dis = np.linalg.norm(self.X_his-sol, axis=-1)
+        return dis**2
+
 
 class SVRE(object):
 
