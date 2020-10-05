@@ -1,5 +1,7 @@
 # Double_stepsize_extragradient
 
+For reproducing experimental results of the paper [Explore Aggressively, Update Conservatively: Stochastic Extragradient Methods with Variable Stepsize Scaling](https://arxiv.org/abs/2003.10162).
+
 ## Requirements
 
 Python3, NumPy, SciPy, Autograd
@@ -27,7 +29,7 @@ python(3) main_quadratic_quardric.py\
   --save_dir=[log_dir]
 ```
 
-### Covariance matrix learning problem
+### Covariance matrix learning problem (A toy GAN model)
 
 ```
 python(3) main_covariance_learning.py\
@@ -44,5 +46,7 @@ necessary information to plot the figures are generated in `log_dir`.
 In more details, the evolution of the relevant convergence measure for each
 single run is recorded.
 
+<!---
 As an example, we provide script `generate_figure_ex.py` to generate
 the EG bilinear figure when the data are saved in the directory `bilinear_EG/`.
+-->
