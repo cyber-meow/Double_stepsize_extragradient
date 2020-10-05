@@ -60,6 +60,18 @@ class QuadraticQuartic(object):
     def grad_y(self, x, y):
         return grad(self.objective, 1)(x, y)
 
+    # Only for bilinear games
+    def Jv(self, X, jac_noise=False):
+        mat_lin = self.C
+        if jac_noise:
+            mat_lin += np.random.randn(self.d, self.d) * self.sigma
+        mat = np.block([
+            [np.zeros([self.d, self.d]), mat_lin],
+            [-mat_lin.T, np.zeros([self.d, self.d])]
+        ])
+        noise = np.random.randn(2*self.d) * self.sigma
+        return mat, mat@X+noise
+
     def grad_x_gaussian_noise(self, x, y):
         noise = np.random.randn(self.d) * self.sigma
         return self.grad_x(x, y) + noise

@@ -1,4 +1,49 @@
 import numpy as np
+from autograd import jacobian
+from algorithms import GsGDA
+
+
+class Hamiltonian(GsGDA):
+    """Stochastic Hamiltonian Gradient Methods for Smooth Games
+    This implementation is only for illustration purpose
+    """
+
+    def step(self, gamma, gamma_y=None):
+        if gamma_y is None:
+            gamma_y = gamma
+        vx = self.vx(self.x, self.y)
+        vy = self.vy(self.x, self.y)
+        # Computing Jacobians
+        jxx = jacobian(self.vx, 0)(self.x, self.y)
+        jxy = jacobian(self.vx, 1)(self.x, self.y)
+        jyx = jacobian(self.vy, 0)(self.x, self.y)
+        jyy = jacobian(self.vy, 1)(self.x, self.y)
+        # Update ((J^T)V)
+        self.x = self.proj(self.x - gamma*(jxx@vx+jyx.T@vy))
+        self.y = self.proj(self.y - gamma_y*(jxy.T@vx+jyy@vy))
+        self.x_his.append(self.x.copy())
+        self.y_his.append(self.y.copy())
+
+
+class StochHamiltonian(object):
+
+    def __init__(self, X1, Jv_stoch):
+        self.X = X1.copy()
+        self.X_his = [X1.copy()]
+        self.Jv = Jv_stoch
+
+    def step(self, gamma):
+        J1, v1 = self.Jv(self.X)
+        J2, v2 = self.Jv(self.X)
+        self.X = self.X - gamma*(J1.T@v2+J2.T@v1)/2
+        self.X_his.append(self.X.copy())
+
+    def run(self, n_iters, gamma, dec_rate=0, dec=True, offset=1):
+        for k in range(n_iters):
+            if dec:
+                self.step(gamma/(k+offset)**dec_rate)
+            else:
+                self.step(gamma)
 
 
 class SVRE(object):

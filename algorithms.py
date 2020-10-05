@@ -15,18 +15,20 @@ class GsGDA(object):
         else:
             self.proj = lambda x: x
 
-    def step(self, gamma_x, gamma_y=None):
+    def step(self, gamma, gamma_y=None):
         if gamma_y is None:
-            gamma_y = gamma_x
+            gamma_y = gamma
+        gamma_x = gamma
         self.x = self.proj(self.x - gamma_x*self.vx(self.x, self.y))
         self.y = self.proj(self.y + gamma_y*self.vy(self.x, self.y))
         self.x_his.append(self.x.copy())
         self.y_his.append(self.y.copy())
 
-    def run(self, n_iters, gamma_x, gamma_y=None,
+    def run(self, n_iters, gamma, gamma_y=None,
             dec_rate=0, dec=True, offset=1):
         if gamma_y is None:
-            gamma_y = gamma_x
+            gamma_y = gamma
+        gamma_x = gamma
         for k in range(n_iters):
             if dec:
                 self.step(gamma_x/(k+offset)**dec_rate,
@@ -37,22 +39,13 @@ class GsGDA(object):
 
 class JacGDA(GsGDA):
 
-    def step(self, gamma):
+    def step(self, gamma, gamma_y=None):
+        if gamma_y is None:
+            gamma_y = gamma
         vx = self.vx(self.x, self.y)
         vy = self.vy(self.x, self.y)
         self.x = self.proj(self.x - gamma*vx)
-        self.y = self.proj(self.y + gamma*vy)
-        self.x_his.append(self.x.copy())
-        self.y_his.append(self.y.copy())
-
-
-class JacGDA(GsGDA):
-
-    def step(self, gamma):
-        vx = self.vx(self.x, self.y)
-        vy = self.vy(self.x, self.y)
-        self.x = self.proj(self.x - gamma*vx)
-        self.y = self.proj(self.y + gamma*vy)
+        self.y = self.proj(self.y + gamma_y*vy)
         self.x_his.append(self.x.copy())
         self.y_his.append(self.y.copy())
 
