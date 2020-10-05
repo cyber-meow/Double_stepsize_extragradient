@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class GsGradientDescentAscent(object):
+class GsGDA(object):
 
     def __init__(self, x1, y1, vx, vy, proj=None):
         self.x = x1.copy()
@@ -15,18 +15,35 @@ class GsGradientDescentAscent(object):
         else:
             self.proj = lambda x: x
 
-    def step(self, gamma):
-        self.x = self.proj(self.x - gamma*self.vx(self.x, self.y))
-        self.y = self.proj(self.y + gamma*self.vy(self.x, self.y))
+    def step(self, gamma_x, gamma_y=None):
+        if gamma_y is None:
+            gamma_y = gamma_x
+        self.x = self.proj(self.x - gamma_x*self.vx(self.x, self.y))
+        self.y = self.proj(self.y + gamma_y*self.vy(self.x, self.y))
         self.x_his.append(self.x.copy())
         self.y_his.append(self.y.copy())
 
-    def run(self, n_iters, gamma, dec_rate=0, dec=True, offset=1):
+    def run(self, n_iters, gamma_x, gamma_y=None,
+            dec_rate=0, dec=True, offset=1):
+        if gamma_y is None:
+            gamma_y = gamma_x
         for k in range(n_iters):
             if dec:
-                self.step(gamma/(k+offset)**dec_rate)
+                self.step(gamma_x/(k+offset)**dec_rate,
+                          gamma_y/(k+offset)**dec_rate)
             else:
-                self.step(gamma)
+                self.step(gamma_x, gamma_y)
+
+
+class JacGDA(GsGDA):
+
+    def step(self, gamma):
+        vx = self.vx(self.x, self.y)
+        vy = self.vy(self.x, self.y)
+        self.x = self.proj(self.x - gamma*vx)
+        self.y = self.proj(self.y + gamma*vy)
+        self.x_his.append(self.x.copy())
+        self.y_his.append(self.y.copy())
 
 
 class TwoStep(object):
