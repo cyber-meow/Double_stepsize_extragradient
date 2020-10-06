@@ -61,18 +61,6 @@ class QuadraticQuartic(object):
     def grad_y(self, x, y):
         return grad(self.objective, 1)(x, y)
 
-    # Only for bilinear games
-    def Jv(self, X):
-        mat_lin = self.C
-        if self.jac_noise:
-            mat_lin += np.random.randn(self.d, self.d) * self.sigma
-        mat = np.block([
-            [np.zeros([self.d, self.d]), mat_lin],
-            [-mat_lin.T, np.zeros([self.d, self.d])]
-        ])
-        noise = np.random.randn(2*self.d) * self.sigma
-        return mat, mat@X+noise
-
     def grad_x_gaussian_noise(self, x, y):
         noise = np.random.randn(self.d) * self.sigma
         return self.grad_x(x, y) + noise
@@ -80,6 +68,39 @@ class QuadraticQuartic(object):
     def grad_y_gaussian_noise(self, x, y):
         noise = np.random.randn(self.d) * self.sigma
         return self.grad_y(x, y) + noise
+
+
+class Bilinear(object):
+
+    def __init__(self, d, mu=1, L=2, sigma=0.1, sigma_C=0):
+        self.C = random_mat(d, mu, L)
+        self.d = d
+        self.sigma = sigma
+        self.sigma_C = sigma_C
+
+    def draw_sample(self):
+        self.C_perturbed = self.C.copy()
+        if self.sigma_C > 0:
+            self.C_perturbed += np.random.randn(self.d, self.d) * self.sigma_C
+
+    def Jv(self, X):
+        self.draw_sample()
+        mat_lin = self.C_perturbed
+        mat = np.block([
+            [np.zeros([self.d, self.d]), mat_lin],
+            [-mat_lin.T, np.zeros([self.d, self.d])]
+        ])
+        noise = np.random.randn(2*self.d) * self.sigma
+        return mat, mat@X+noise
+
+    def vec(self, X):
+        return self.Jv(X)[1]
+
+    def grad_x(self, x, y):
+        return self.vec(np.r_[x, y])[:self.d]
+
+    def grad_y(self, x, y):
+        return -self.vec(np.r_[x, y])[self.d:]
 
 
 class SmoothL1Regression(object):

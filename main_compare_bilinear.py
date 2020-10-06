@@ -1,50 +1,61 @@
 import os
 import csv
 from argparse import ArgumentParser
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 
-from question_instances import QuadraticQuartic
-from algorithms2 import StochHamiltonian
+from question_instances import Bilinear
+from algorithms import JacDssExtraGrad
+from algorithms2 import StochHamiltonian, Anchoring
 
 
 def main(params):
 
-    qud = QuadraticQuartic(
-            d=params.dim, lin_coef=1, q2_coef=0, q4_coef=0,
-            mu_l=params.mu_l, L_l=params.L_l, sigma=params.noise_std)
+    qud = Bilinear(d=params.dim, mu=params.mu,
+                   L=params.L, sigma=params.noise_std)
     x1 = np.zeros(params.dim)
     x1[0] = 1
     y1 = x1.copy()
-    init_g = params.init_stepsize_gamma
+    init_lr = 0.1
     iters = params.nb_iterations
-    algo = StochHamiltonian
-    offset = params.offset
+    offset = 20
+    sol = np.zeros(2*params.dim)
 
     np.save(os.path.join(params.save_dir, 'C'), qud.C)
 
-    # Execute one deterministic run
-    qud.sigma = 0
-    opt = algo(np.r_[x1, y1], qud.Jv)
-    opt.run(iters, params.init_stepsize_gamma, dec=False)
-    sol = np.zeros(2*params.dim)
-    dis2 = opt.distance2_his(sol)
-    np.save(os.path.join(params.save_dir, 'deter'), dis2)
-
     # Stochastic runs
-    qud.sigma = params.noise_std
-    multi_runs(qud, algo, x1, y1, sol, iters, offset,
-               init_g, params.rp_times, params.save_dir)
+    algos = ['Hamiltonian', 'DSEG', 'Anchoring']
+    pool = Pool(cpu_count())
+    args = []
+    for algo in algos:
+        for k in range(params.rp_times):
+            args.append((qud, algo, x1, y1, sol, iters, offset, init_lr, k))
+
+    results = pool.map(single_run_para, args)
+    for k, algo in enumerate(algos):
+        dis2s = results[k*params.rp_times: (k+1)*params.rp_times]
+        np.save(os.path.join(
+            params.save_dir, f'stoch-{algo}'), np.array(dis2s))
 
 
-def single_run(qud, algo, x1, y1, sol, iters, offset,
-               init_g, rd_seed):
+def single_run(qud, algo, x1, y1, sol, iters, offset, init_lr, rd_seed):
     np.random.seed(rd_seed)
-    gamma = init_g*offset
-    opt = algo(np.r_[x1, y1], qud.Jv)
-    opt.run(iters, gamma, dec_rate=1, dec=True, offset=offset)
-    dist2 = opt.distance2_his(sol)
-    return dist2
+    if algo == 'Hamiltonian':
+        opt = StochHamiltonian(np.r_[x1, y1], qud.Jv)
+        opt.run(iters, init_lr*offset, dec_rate=1, dec=True, offset=offset)
+    if algo == 'DSEG':
+        opt = JacDssExtraGrad(x1, y1, qud.grad_x, qud.grad_y)
+        opt.run(iters, 1, init_lr*offset,
+                dec_g=0, dec_e=1, dec=True, offset=offset)
+    if algo == 'Anchoring':
+        opt = Anchoring(np.r_[x1, y1], qud.vec)
+        opt.run(iters, 0.3, 0.3, dec_gamma=0.7, dec_reg=0.9, offset=1)
+    return opt.distance2_his(sol)
+
+
+def single_run_para(args):
+    return single_run(*args)
 
 
 def multi_runs(qud, algo, x1, y1, sol, iters, offset,
@@ -65,13 +76,10 @@ if __name__ == '__main__':
     parser.add_argument("--dim", type=int, default=50)
     parser.add_argument("--noise_std", type=float, default=0.5)
 
-    parser.add_argument("--mu_l", type=float, default=1)
-    parser.add_argument("--L_l", type=float, default=2)
-
-    parser.add_argument("--offset", type=int, default=1)
+    parser.add_argument("--mu", type=float, default=1)
+    parser.add_argument("--L", type=float, default=2)
 
     parser.add_argument("--nb_iterations", type=int, default=10000)
-    parser.add_argument("--init_stepsize_gamma", type=float, default=0.4)
     parser.add_argument("--rp_times", type=int, default=10)
 
     parser.add_argument("--save_dir", type=str, default=".")
