@@ -7,7 +7,7 @@ import numpy as np
 
 from question_instances import Bilinear
 from algorithms import JacDssExtraGrad
-from algorithms2 import StochHamiltonian, Anchoring
+from algorithms_supp import StochHamiltonian, Anchoring
 
 
 def main(params):
