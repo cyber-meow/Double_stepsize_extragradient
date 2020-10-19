@@ -29,7 +29,7 @@ python(3) main_quadratic_quardric.py\
   --save_dir=[log_dir]
 ```
 
-### Covariance matrix learning problem (A toy GAN model)
+### Linear quadratic Gassian GAN (Covariance learning)
 
 ```
 python(3) main_covariance_learning.py\
