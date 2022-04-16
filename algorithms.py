@@ -57,6 +57,8 @@ class TwoStep(object):
         self.y = y1.copy()
         self.x_his = [x1.copy()]
         self.y_his = [y1.copy()]
+        self.xm_his = [x1.copy()]
+        self.ym_his = [y1.copy()]
         self.vx = vx
         self.vy = vy
         if proj is None:
@@ -111,6 +113,8 @@ class JacDssExtraGrad(TwoStep):
         self.y = self.proj(self.y + eta * self.vy(x_inter, y_inter))
         self.x_his.append(self.x.copy())
         self.y_his.append(self.y.copy())
+        self.xm_his.append(x_inter.copy())
+        self.ym_his.append(y_inter.copy())
 
 
 class GsOG(TwoStep):
@@ -159,8 +163,6 @@ class JacOG(TwoStep):
         # Oracle call at past step, initializing using x1, y1
         self.last_vx = vx(x1, y1)
         self.last_vy = vy(x1, y1)
-        self.xm_his = [x1.copy()]
-        self.ym_his = [y1.copy()]
 
     def step(self, gamma, eta):
         vx = self.vx(self.x, self.y)
